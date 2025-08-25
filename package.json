@@ -1,15 +1,16 @@
 {
   "name": "artist_portfolio",
   "version": "1.0.0",
+  "private": true,
   "main": "index.js",
   "repository": "https://github.com/danielmunier/artist_portfolio.git",
   "author": "Daniel <idanielmunier@gmail.com>",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "dev": "yarn workspace backend start:dev && yarn workspace frontend dev",
+    "dev": "concurrently \"yarn workspace backend start:dev\" \"yarn workspace frontend dev\"",
     "dev:backend": "yarn workspace backend start:dev",
     "dev:frontend": "yarn workspace frontend dev",
     "build": "yarn workspace backend build && yarn workspace frontend build",

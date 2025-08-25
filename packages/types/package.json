@@ -1,0 +1,17 @@
+{
+  "name": "@portfolio/types",
+  "version": "1.0.0",
+  "description": "Shared types for Portfolio Artist project",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["types", "portfolio", "artist", "shared"],
+  "author": "Portfolio Artist Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

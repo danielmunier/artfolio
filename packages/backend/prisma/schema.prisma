@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Usuário do sistema (artista)
+model User {
+  id             String   @id @default(cuid())
+  username       String   @unique
+  email          String   @unique
+  password       String   // Senha criptografada
+  name           String
+  bio            String?
+  avatar         String?
+  userBackground String?  // Tipo de background (starry-head, gradient, particles, etc)
+  status         String   @default("offline") // online, offline, away
+  lastSeen       DateTime?
+  lastLogin      DateTime?
+  // Música do perfil
+  currentSong    String?  // Nome da música atual
+  artistName     String?  // Nome do artista da música
+  spotifyUrl     String?  // URL do Spotify da música
+  isPlaying      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relacionamentos
+  portfolio      Portfolio?
+  arts           Art[]
+  profileLikes   ProfileLike[] // Likes recebidos no perfil
+  artLikes       ArtLike[]     // Likes dados em artes
+  contracts      Contract[]     // Contratos como artista
+  clientContracts Contract[]    // Contratos como cliente
+  views          ProfileView[]  // Visualizações do perfil
+  sentMessages   Message[]      @relation("SentMessages")
+  receivedMessages Message[]    @relation("ReceivedMessages")
+  notifications  Notification[]
+
+  @@map("users")
+}
+
+// Portfolio do artista
+model Portfolio {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  title       String
+  description String?
+  theme       String   @default("default")
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("portfolios")
+}
+
+// Arte/obra do artista
+model Art {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  imageUrl    String
+  category    String?
+  tags        String[]
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes       ArtLike[]
+  views       ArtView[]
+
+  @@map("arts")
+}
+
+// Likes em artes
+model ArtLike {
+  id        String   @id @default(cuid())
+  artId     String
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  art       Art      @relation(fields: [artId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([artId, userId]) // Um usuário só pode dar like uma vez em cada arte
+  @@map("art_likes")
+}
+
+// Likes no perfil do artista
+model ProfileLike {
+  id        String   @id @default(cuid())
+  artistId  String   // ID do artista que recebeu o like
+  userId    String   // ID do usuário que deu o like
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  artist    User     @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([artistId, userId]) // Um usuário só pode dar like uma vez no perfil
+  @@map("profile_likes")
+}
+
+// Visualizações de artes
+model ArtView {
+  id        String   @id @default(cuid())
+  artId     String
+  userId    String?  // Pode ser anônimo
+  ipAddress String?  // Para tracking de visualizações únicas
+  userAgent String?  // Para analytics
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  art       Art      @relation(fields: [artId], references: [id], onDelete: Cascade)
+
+  @@map("art_views")
+}
+
+// Visualizações do perfil
+model ProfileView {
+  id        String   @id @default(cuid())
+  artistId  String
+  userId    String?  // Pode ser anônimo
+  ipAddress String?  // Para tracking de visualizações únicas
+  userAgent String?  // Para analytics
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  artist    User     @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@map("profile_views")
+}
+
+// Sistema de contratos
+model Contract {
+  id          String   @id @default(cuid())
+  artistId    String   // Artista contratado
+  clientId    String   // Cliente que contratou
+  title       String
+  description String?
+  budget      Decimal  @db.Decimal(10, 2) // Orçamento em reais
+  status      ContractStatus @default("pending")
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  artist      User     @relation("ArtistContracts", fields: [artistId], references: [id], onDelete: Cascade)
+  client      User     @relation("ClientContracts", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("contracts")
+}
+
+// Status dos contratos
+enum ContractStatus {
+  pending    // Pendente
+  accepted   // Aceito pelo artista
+  inProgress // Em andamento
+  completed  // Concluído
+  cancelled  // Cancelado
+  disputed   // Em disputa
+}
+
+// Configurações de notificações
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  data      Json?    // Dados adicionais em formato JSON
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Tipos de notificação
+enum NotificationType {
+  like           // Novo like
+  view           // Nova visualização
+  contract       // Novo contrato
+  message        // Nova mensagem
+  system         // Notificação do sistema
+}
+
+// Mensagens entre usuários
+model Message {
+  id        String   @id @default(cuid())
+  senderId  String
+  receiverId String
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relacionamentos
+  sender    User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver  User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
